@@ -1,0 +1,239 @@
+esphome:
+  name: renogy-batteries
+  includes: 
+    - renogy_utilities.h
+
+esp32:
+  board: nodemcu-32s
+  framework:
+    type: arduino
+
+substitutions:
+  # todo: update this with the MAC address for your bluetooth device
+  ble_mac_address: FF:FF:FF:FF:FF:FF
+
+  #todo: add or remove other battery Ids, based on your usage. Also, see where these are used and add or remove nodes accordingly
+  battery_id_1: "48"
+  battery_id_2: "49"
+  battery_id_3: "50"
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: "super_secret" # it is recommended that you put this in a secrets.yaml file and reference it here
+
+# Enable OTA updates so you don't have to plug in your ESP32 to your dev box after the first upload
+ota:
+  - platform: esphome
+    password: "super_duper_secret" # it is recommended that you put this in a secrets.yaml file and reference it here
+
+# Configure the ESP32 to connect to your wifi network
+wifi:
+  ssid: "my_ssid"
+  password: "some_other_secret" # it is recommended that you put this in a secrets.yaml file and reference it here
+
+    
+esp32_ble_tracker:
+  scan_parameters:
+    # We currently use the defaults to ensure Bluetooth
+    # can co-exist with WiFi. In the future we may be able to
+    # enable the built-in coexistence logic in ESP-IDF
+    active: true
+
+sensor:
+  # Renogy battery 1
+  - platform: template
+    # NOTE: The _name_ (not id) is what is turned into an Id in HomeAssistant. The Id field is only used within the scope of ESPHome (per HA devs)
+    name: "Renogy Battery ${battery_id_1} Current"
+    id: renogy_battery_${battery_id_1}_current
+    device_class: current
+    unit_of_measurement: A
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_1} Voltage"
+    id: renogy_battery_${battery_id_1}_voltage
+    device_class: voltage
+    unit_of_measurement: V
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_1} Present Capacity"
+    id: renogy_battery_${battery_id_1}_present_capacity
+    unit_of_measurement: Ah
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_1} Total Capacity"
+    id: renogy_battery_${battery_id_1}_total_capacity
+    unit_of_measurement: Ah
+    accuracy_decimals: 1    
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_1} Charge Level"
+    id: renogy_battery_${battery_id_1}_charge_level
+    icon: mdi:percent
+    unit_of_measurement: "%"
+    accuracy_decimals: 1    
+
+  # Renogy battery 2
+  - platform: template
+    name: "Renogy Battery ${battery_id_2} Current"
+    id: renogy_battery_${battery_id_2}_current
+    device_class: current
+    unit_of_measurement: A
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_2} Voltage"
+    id: renogy_battery_${battery_id_2}_voltage
+    device_class: voltage
+    unit_of_measurement: V
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_2} Present Capacity"
+    id: renogy_battery_${battery_id_2}_present_capacity
+    unit_of_measurement: Ah
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_2} Total Capacity"
+    id: renogy_battery_${battery_id_2}_total_capacity
+    unit_of_measurement: Ah
+    accuracy_decimals: 1    
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_2} Charge Level"
+    id: renogy_battery_${battery_id_2}_charge_level
+    icon: mdi:percent
+    unit_of_measurement: "%"
+    accuracy_decimals: 1    
+
+  # Renogy battery 3
+  - platform: template
+    name: "Renogy Battery ${battery_id_3} Current"
+    id: renogy_battery_${battery_id_3}_current
+    device_class: current
+    unit_of_measurement: A
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_3} Voltage"
+    id: renogy_battery_${battery_id_3}_voltage
+    device_class: voltage
+    unit_of_measurement: V
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_3} Present Capacity"
+    id: renogy_battery_${battery_id_3}_present_capacity
+    unit_of_measurement: Ah
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_3} Total Capacity"
+    id: renogy_battery_${battery_id_3}_total_capacity
+    unit_of_measurement: Ah
+    accuracy_decimals: 1    
+
+  - platform: template
+    name: "Renogy Battery ${battery_id_3} Charge Level"
+    id: renogy_battery_${battery_id_3}_charge_level
+    icon: mdi:percent
+    unit_of_measurement: "%"
+    accuracy_decimals: 1    
+
+
+  - platform: ble_client
+    ble_client_id: renogy_battery_esp32_bc
+    id: renogy_battery_esp32_sensor
+    internal: true
+    type: characteristic
+    service_uuid: FFF0
+    characteristic_uuid: FFF1
+    notify: true
+    update_interval: never
+
+    # on_notify: 
+    #   then:
+    #     - lambda: |-
+    #         ESP_LOGD("ble_client.notify", "x: %.2f", x);
+
+    lambda: |-      
+      // A variable x of type esp32_ble_tracker::ESPBTDevice is passed to the automation for use in lambdas. (from docs)
+      // it actually behaves like a byte array though, so I'm not sure about those docs...
+      
+      int receivedSize = x.size();
+      ESP_LOGD("ble_client_lambda", "Received bytes size: %d", receivedSize);
+
+      // Log each byte in the array
+      for (size_t i = 0; i < receivedSize; ++i) {
+        ESP_LOGD("main", "Response Byte %d: 0x%02X", i, x[i]);
+      }
+
+      // if something went wrong, we didn't get the data we expected, so bail out here
+      if (receivedSize < 17) return NAN;
+
+      // parse the data using this method from renogy_utilities.h
+      HandleBatteryData(x);
+
+      return 0.0; // this sensor isn't actually used other than to hook into raw value and publish to template sensors
+
+
+ble_client:
+  - mac_address: ${ble_mac_address} # this pulls the value from the substitution entry above
+    name: Renogy Battery
+    id: renogy_battery_esp32_bc   
+    auto_connect: true 
+    on_connect:
+      then:
+        - logger.log: 
+            format: "BLE client connected to battery"
+            level: DEBUG
+    on_disconnect:
+      then:
+        - logger.log: 
+            format: "BLE client disconnected from battery"
+            level: DEBUG
+
+# every 30 seconds, pull each battery with a 5s delay between each one. todo: update these timings as needed
+interval:
+  - interval: 30s
+    then:
+      - ble_client.ble_write: 
+          characteristic_uuid: "FFD1"
+          service_uuid: "FFD0"
+          
+          id: renogy_battery_esp32_bc
+          value: !lambda |-
+                    vector<uint8_t> request = GetBatteryRequest(${battery_id_1});
+                    return request;
+
+      - delay: 5s
+      - ble_client.ble_write: 
+          characteristic_uuid: "FFD1"
+          service_uuid: "FFD0"
+          
+          id: renogy_battery_esp32_bc
+          value: !lambda |-
+                    vector<uint8_t> request = GetBatteryRequest(${battery_id_2});
+                    return request;
+
+      - delay: 5s
+      - ble_client.ble_write: 
+          characteristic_uuid: "FFD1"
+          service_uuid: "FFD0"
+          
+          id: renogy_battery_esp32_bc
+          value: !lambda |-
+                    vector<uint8_t> request = GetBatteryRequest(${battery_id_3});
+                    return request;                   
+
+binary_sensor:
+  - platform: ble_presence
+    mac_address: ${ble_mac_address} # this pulls the value from the substitution entry above
+    name: "Renogy BLE Presence"
+    entity_category: "DIAGNOSTIC"
