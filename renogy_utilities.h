@@ -1,13 +1,15 @@
 #include <vector>
 using namespace std;
 
-uint16_t GetCRC16(vector<uint8_t> data);
+vector<uint8_t> GetBatteryRequest(uint8_t batteryNumber);
+void HandleBatteryData(vector<uint8_t> x);
+
 
 vector<uint8_t> GetBatteryRequest(uint8_t batteryNumber) {
     vector<uint8_t> dataBytes = { batteryNumber, 0x03, 0x13, 0xB2, 0x00, 0x06 };
 
     // add checksum to the end
-    uint16_t checksum = GetCRC16(dataBytes);
+    uint16_t checksum = crc16(&dataBytes[0], dataBytes.size());
 
     // this needs to be split into 2 bytes
     dataBytes.push_back((checksum >> 0) & 0xFF);
@@ -91,22 +93,4 @@ void HandleBatteryData(vector<uint8_t> x) {
         break;
 
     }
-}
-
-uint16_t GetCRC16(vector<uint8_t> data) {
-    uint16_t crc = 0xFFFF;
-    int i;
-
-	for(auto item = data.begin(); item != data.end(); ++item){
-        crc ^= (uint16_t)*item;
-        for (i = 0; i < 8; ++i) {
-            if (crc & 1)
-                crc = (crc >> 1) ^ 0xA001;
-            else
-                crc = (crc >> 1);
-        }
-    }
-    ESP_LOGD("GetCRC16", "CRC: %d", crc);
-    
-	return crc;
 }
