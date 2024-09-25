@@ -1,0 +1,238 @@
+esphome:
+  name: renogy-rover
+  includes: 
+    - renogy_rover_utilities.h
+    
+esp32:
+  board: nodemcu-32s
+  framework:
+    type: arduino
+
+substitutions:
+  # todo: update this with the MAC address for your bluetooth device
+  ble_mac_address: FF:FF:FF:FF:FF:FF
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: "super_secret" # it is recommended that you put this in a secrets.yaml file and reference it here
+
+# Enable OTA updates so you don't have to plug in your ESP32 to your dev box after the first upload
+ota:
+  - platform: esphome
+    password: "super_duper_secret" # it is recommended that you put this in a secrets.yaml file and reference it here
+
+# Configure the ESP32 to connect to your wifi network
+wifi:
+  ssid: "my_ssid"
+  password: "some_other_secret" # it is recommended that you put this in a secrets.yaml file and reference it here
+
+    
+esp32_ble_tracker:
+  scan_parameters:
+    # We currently use the defaults to ensure Bluetooth
+    # can co-exist with WiFi. In the future we may be able to
+    # enable the built-in coexistence logic in ESP-IDF
+    active: true
+
+
+text_sensor:
+  - platform: template
+    name: "Rover Load Status"
+    id: load_status
+
+  - platform: template
+    name: "Rover Charging Status"
+    id: charging_status
+
+sensor:
+  - platform: template
+    name: "Rover Battery Percentage"
+    id: battery_percentage
+    device_class: "battery"
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover Battery Voltage"
+    id: battery_voltage
+    device_class: voltage
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Rover Battery Current"
+    id: battery_current
+    device_class: "current"
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Rover Battery Temperature"
+    id: battery_temperature
+    device_class: "temperature"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Rover Controller Temperature"
+    id: controller_temperature
+    device_class: "temperature"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Rover Load Voltage"
+    id: load_voltage
+    device_class: voltage
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Rover Load Current"
+    id: load_current
+    device_class: current
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Rover Load Power"
+    id: load_power
+    device_class: "power"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover PV Voltage"
+    id: pv_voltage
+    device_class: voltage
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Rover PV Current"
+    id: pv_current
+    device_class: current
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Rover PV Power"
+    id: pv_power
+    device_class: "power"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover Max Charging Power Today"
+    id: max_charging_power_today
+    device_class: "power"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover Max Discharging Power Today"
+    id: max_discharging_power_today
+    device_class: "power"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover Charging Amp Hours Today"
+    id: charging_amp_hours_today
+    unit_of_measurement: "Ah"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover Discharging Amp Hours Today"
+    id: discharging_amp_hours_today
+    unit_of_measurement: "Ah"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover Power Generation Today"
+    id: power_generation_today
+    device_class: "energy"
+    state_class: total_increasing
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover Power Consumption Today"
+    id: power_consumption_today
+    device_class: "energy"
+    unit_of_measurement: "Wh"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Rover Power Generation Total"
+    id: power_generation_total
+    device_class: "energy"
+    state_class: total_increasing
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+
+  - platform: ble_client
+    ble_client_id: renogy_rover_esp32_bc
+    id: renogy_rover_esp32_sensor
+    internal: true
+    type: characteristic
+    service_uuid: FFF0
+    characteristic_uuid: FFF1
+    notify: true
+    update_interval: never
+
+    # on_notify: 
+    #   then:
+    #     - lambda: |-
+    #         ESP_LOGD("ble_client.notify", "x: %.2f", x);
+
+    lambda: |-      
+      // A variable x of type esp32_ble_tracker::ESPBTDevice is passed to the automation for use in lambdas. (from docs)
+      int receivedSize = x.size();
+      ESP_LOGD("ble_client_lambda", "Received bytes size: %d", receivedSize);
+      // Log each byte in the array
+      for (size_t i = 0; i < receivedSize; ++i) {
+        ESP_LOGD("main", "Response Byte %d: 0x%02X", i, x[i]);
+      }
+      if (receivedSize < 73) return NAN;
+
+      HandleRoverData(x);
+      return 0.0; // this sensor isn't actually used other than to hook into raw value and publish to template sensors
+
+
+ble_client:
+  - mac_address: ${ble_mac_address}
+    name: Renogy Rover
+    id: renogy_rover_esp32_bc   
+    auto_connect: true 
+    on_connect:
+      then:
+        - logger.log: 
+            format: "BLE client connected to rover"
+            level: DEBUG
+    on_disconnect:
+      then:
+        - logger.log: 
+            format: "BLE client disconnected from rover"
+            level: DEBUG
+
+interval:
+  - interval: 30s
+    then:
+      - ble_client.ble_write: 
+          characteristic_uuid: "FFD1"
+          service_uuid: "FFD0"
+          
+          id: renogy_rover_esp32_bc
+          value: !lambda |-
+                    vector<uint8_t> request = GetRoverRequest();
+                    return request;
+
+binary_sensor:
+  - platform: ble_presence
+    mac_address: ${ble_mac_address}
+    name: "Renogy BLE Presence Rover"
+    entity_category: "DIAGNOSTIC"

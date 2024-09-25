@@ -2,9 +2,14 @@
 ESPHome implementation to pull data from BT-enabled Renogy devices
 
 ## Setup
-renogy_batteries.yaml is configured to connect to a single Renogy BT device (currently tested on a BT-2 connected to three batteries in a daisy-chained configuration.) There are todos in the yaml that indicate places where updates should be made, or at least pertinent information for the user is available.
+- renogy_batteries.yaml is configured to connect to a single Renogy BT device (currently tested on a BT-2 connected to three batteries in a daisy-chained configuration.) There are TODOs in the yaml that indicate places where updates should be made, or at least pertinent information for the user is available.
 
-renogy_utilities.h contains methods that do the heavy-lifting regarding prepping requests to be sent to the BT device and parsing the response.
+  - renogy_battery_utilities.h contains methods to do the payload creation and response parsing for communicating with the BT device.
+
+
+- renogy_rover.yaml is configured to connect to a Renogy BT device (tested on a BT-2.) There are TODOs in the yaml that indicate place where updates should be made.
+
+  - renogy_rover_utilities.h contains methods to do the payload creation and response parsing for communicating with the BT device.
 
 ### Disclaimer
 
