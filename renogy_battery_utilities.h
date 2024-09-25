@@ -114,33 +114,38 @@ void HandleBatteryData(const vector<uint8_t>& x) {
     ESP_LOGD("HandleBatteryData", "totalCapacityFloat: %.1f", totalCapacityFloat);
     ESP_LOGD("HandleBatteryData", "chargeLevelFloat: %.1f", chargeLevelFloat);
 
-    // todo: this is hard-coded to batteries 48, 49, 50. Update to use batteryId to dynamically work. 
-    // If that's not possible, we could just make a giant switch for renogy_battery_1_* to renogy_battery_255_* 
-    // so they are all handled, but that's kind of heavy handed...
-    
-    // use battery_id to decide which to update
-    switch (batteryId){
-        case 48:
-            id(renogy_battery_48_current).publish_state(currentFloat);
-            id(renogy_battery_48_voltage).publish_state(voltageFloat);
-            id(renogy_battery_48_present_capacity).publish_state(presentCapacityFloat);
-            id(renogy_battery_48_total_capacity).publish_state(totalCapacityFloat);
-            id(renogy_battery_48_charge_level).publish_state(chargeLevelFloat);
-        break;
-        case 49:
-            id(renogy_battery_49_current).publish_state(currentFloat);
-            id(renogy_battery_49_voltage).publish_state(voltageFloat);
-            id(renogy_battery_49_present_capacity).publish_state(presentCapacityFloat);
-            id(renogy_battery_49_total_capacity).publish_state(totalCapacityFloat);
-            id(renogy_battery_49_charge_level).publish_state(chargeLevelFloat);
-        break;
-        case 50:
-            id(renogy_battery_50_current).publish_state(currentFloat);
-            id(renogy_battery_50_voltage).publish_state(voltageFloat);
-            id(renogy_battery_50_present_capacity).publish_state(presentCapacityFloat);
-            id(renogy_battery_50_total_capacity).publish_state(totalCapacityFloat);
-            id(renogy_battery_50_charge_level).publish_state(chargeLevelFloat);
-        break;
+    ESP_LOGD("HandleBatteryData", "Building partial Ids");
+    string current_id(to_string(batteryId));
+    current_id.append(" Current");
 
+    string voltage_id(to_string(batteryId));
+    voltage_id.append(" Voltage");
+
+    string present_capacity_id(to_string(batteryId));
+    present_capacity_id.append(" Present Capacity");
+
+    string total_capacity_id(to_string(batteryId));
+    total_capacity_id.append(" Total Capacity");
+
+    string charge_level_id(to_string(batteryId));
+    charge_level_id.append(" Charge Level");
+
+    for (auto *obj : App.get_sensors()){
+        ESP_LOGV("HandleBatteryData", "Looping sensors. Current name: %s", obj->get_name());
+        if (obj->get_name().str().find(current_id) != string::npos) {
+            obj->publish_state(currentFloat);
+        }
+        else if (obj->get_name().str().find(voltage_id) != string::npos) {
+            obj->publish_state(voltageFloat);
+        }
+        else if (obj->get_name().str().find(present_capacity_id) != string::npos) {
+            obj->publish_state(presentCapacityFloat);
+        }
+        else if (obj->get_name().str().find(total_capacity_id) != string::npos) {
+            obj->publish_state(totalCapacityFloat);
+        }
+        else if (obj->get_name().str().find(charge_level_id) != string::npos) {
+            obj->publish_state(chargeLevelFloat);
+        }
     }
 }
