@@ -1,11 +1,36 @@
 #include <vector>
 using namespace std;
 
-vector<uint8_t> GetBatteryRequest(uint8_t batteryNumber);
-void HandleBatteryData(vector<uint8_t> x);
-
-
 vector<uint8_t> GetBatteryRequest(uint8_t batteryNumber) {
+    //todo: this is the first "section" from renogy-bt. Get the rest.
+    //     self.sections = [
+    //     {'register': 5000, 'words': 17, 'parser': self.parse_cell_volt_info},
+    //     {'register': 5017, 'words': 17, 'parser': self.parse_cell_temp_info},
+    //     {'register': 5042, 'words': 6, 'parser': self.parse_battery_info},
+    //     {'register': 5122, 'words': 8, 'parser': self.parse_device_info},
+    //     {'register': 5223, 'words': 1, 'parser': self.parse_device_address}
+    // ]
+
+    // request = self.create_generic_read_request(self.device_id, 3, self.sections[index]['register'], self.sections[index]['words']) 
+
+    // def create_generic_read_request(self, device_id, function, regAddr, readWrd):                             
+    //     data = None                                
+    //     if regAddr != None and readWrd != None:
+    //         data = []
+    //         data.append(device_id)
+    //         data.append(function)
+    // register from sections
+    //         data.append(int_to_bytes(regAddr, 0))
+    //         data.append(int_to_bytes(regAddr, 1))
+    // words from sections
+    //         data.append(int_to_bytes(readWrd, 0))
+    //         data.append(int_to_bytes(readWrd, 1))
+
+    //         crc = crc16_modbus(bytes(data))
+    //         data.append(crc[0])
+    //         data.append(crc[1])
+
+    // function: 0x03 is write (send a request), 0x06 is read 
     vector<uint8_t> dataBytes = { batteryNumber, 0x03, 0x13, 0xB2, 0x00, 0x06 };
 
     // add checksum to the end
@@ -21,12 +46,37 @@ vector<uint8_t> GetBatteryRequest(uint8_t batteryNumber) {
     return dataBytes;
 }
 
-void HandleBatteryData(vector<uint8_t> x) {
+void HandleBatteryData(const vector<uint8_t>& x) {
     uint8_t batteryId;
     std::memcpy(&batteryId, &x[0], sizeof(batteryId));
     ESP_LOGD("HandleBatteryData", "battery Id: %d", batteryId);
     
-    // Parse the function
+    // def on_data_received(self, response):
+    //     self.read_timer.cancel()
+    //     operation = bytes_to_int(response, 1, 1)
+
+    //     if operation == 3: # read operation
+    //         logging.info("on_data_received: response for read operation")
+    //         if (self.section_index < len(self.sections) and
+    //             self.sections[self.section_index]['parser'] != None and
+    //             self.sections[self.section_index]['words'] * 2 + 5 == len(response)):
+    //             # parse and update data
+    //             self.sections[self.section_index]['parser'](response)
+
+    //         if self.section_index >= len(self.sections) - 1: # last section, read complete
+    //             self.section_index = 0
+    //             self.on_read_operation_complete()
+    //             self.data = {}
+    //         else:
+    //             # still more sections, so keep reading
+    //             self.section_index += 1
+    //             time.sleep(0.5)
+    //             self.read_section()
+    //     else:
+    //         logging.warn("on_data_received: unknown operation={}".format(operation))
+
+
+    // Parse the function (3 == Read)
     uint8_t function;
     std::memcpy(&function, &x[1], sizeof(function));
     // function = ntohs(function); // Convert from network byte order to host byte order

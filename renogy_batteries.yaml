@@ -1,7 +1,7 @@
 esphome:
   name: renogy-batteries
   includes: 
-    - renogy_utilities.h
+    - renogy_battery_utilities.h
 
 esp32:
   board: nodemcu-32s
