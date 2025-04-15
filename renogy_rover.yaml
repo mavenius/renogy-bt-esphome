@@ -236,3 +236,26 @@ binary_sensor:
     mac_address: ${ble_mac_address}
     name: "Renogy BLE Presence Rover"
     entity_category: "DIAGNOSTIC"
+
+switch:
+  - platform: template
+    name: "Rover Load Switch"
+    id: load_switch
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    turn_on_action:
+      - ble_client.ble_write:
+          id: renogy_rover_esp32_bc
+          service_uuid: "FFD0"
+          characteristic_uuid: "FFD1"
+          value: !lambda |-
+            vector<uint8_t> request = GetLoadControlRequest(true);
+            return request;
+    turn_off_action:
+      - ble_client.ble_write:
+          id: renogy_rover_esp32_bc
+          service_uuid: "FFD0"
+          characteristic_uuid: "FFD1"
+          value: !lambda |-
+            vector<uint8_t> request = GetLoadControlRequest(false);
+            return request;
